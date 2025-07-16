@@ -26,7 +26,7 @@ pytest_plugins = [
 ]
 
 try:
-    from yacut import app, db
+    from yacut.settings import app, db
     from yacut.models import URLMap  # noqa
 except NameError as exc:
     raise AssertionError(

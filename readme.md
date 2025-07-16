@@ -13,7 +13,7 @@ cd yacut
 Cоздать и активировать виртуальное окружение:
 
 ```
-python3 -m venv venv
+python -m venv venv
 ```
 
 * Если у вас Linux/macOS
@@ -31,20 +31,21 @@ python3 -m venv venv
 Установить зависимости из файла requirements.txt:
 
 ```
-python3 -m pip install --upgrade pip
+python -m pip install --upgrade pip
 ```
 
 ```
 pip install -r requirements.txt
 ```
 
-Создать в директории проекта файл .env с четыремя переменными окружения:
+Создать в директории проекта файл .env с пятью переменными окружения:
 
 ```
 FLASK_APP=yacut
 FLASK_ENV=development
 SECRET_KEY=your_secret_key
 DB=sqlite:///db.sqlite3
+DISK_TOKEN=secret
 ```
 
 Создать базу данных и применить миграции:
