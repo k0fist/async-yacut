@@ -6,7 +6,7 @@ from yacut.settings import app, db
 from .forms import LinksForm, FilesForm
 from .yandex_disk import upload_file_to_yadisk
 from flask import (
-    abort, render_template, flash, redirect, 
+    abort, render_template, flash, redirect,
     url_for, current_app, session, jsonify, request
 )
 from sqlalchemy.exc import IntegrityError
