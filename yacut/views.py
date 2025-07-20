@@ -90,6 +90,7 @@ async def files_view():
         'files.html', form=form, files=paired
     ), HTTPStatus.OK
 
+
 @app.route('/<string:slug>')
 def url_view(slug):
     link = URLMap.query.filter_by(short=slug).first_or_404()

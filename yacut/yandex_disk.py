@@ -1,10 +1,6 @@
 
 import urllib.parse
-import aiohttp
 
-from .models import URLMap
-from .sequence_generator import get_unique_short_id
-from flask import session
 
 
 API_HOST = 'https://cloud-api.yandex.net/'
@@ -23,7 +19,6 @@ async def upload_file_to_yadisk(aio_sess, uploaded, token):
     filename = uploaded.filename
     headers = {'Authorization': f'OAuth {token}'}
 
-    # 1) GET upload URL
     async with aio_sess.get(
         UPLOAD_ENDPOINT,
         headers=headers,
@@ -32,14 +27,12 @@ async def upload_file_to_yadisk(aio_sess, uploaded, token):
         r1.raise_for_status()
         upload_url = (await r1.json())['href']
 
-    # 2) PUT файл
     data = uploaded.read()
     async with aio_sess.put(upload_url, data=data) as r2:
         r2.raise_for_status()
         loc = urllib.parse.unquote(r2.headers['Location'])
         disk_path = loc.replace('/disk', '', 1)
 
-    # 3) GET download URL
     async with aio_sess.get(
         DOWNLOAD_ENDPOINT,
         headers=headers,
