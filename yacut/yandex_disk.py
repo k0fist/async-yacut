@@ -1,8 +1,6 @@
 
 import urllib.parse
 
-
-
 API_HOST = 'https://cloud-api.yandex.net/'
 API_VERSION = 'v1'
 UPLOAD_ENDPOINT = f'{API_HOST}{API_VERSION}/disk/resources/upload'
