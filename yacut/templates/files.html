@@ -41,12 +41,12 @@
                 </tr>
               </thead>
               <tbody>
-                {% for f in files %}
+                {% for filename, short in files %}
                   <tr>
-                    <td>{{ f.filename }}</td>
+                    <td>{{ filename }}</td>
                     <td>
-                      <a href="{{ url_for('url_view', slug=f.short, _external=True) }}">
-                        {{ url_for('url_view', slug=f.short, _external=True) }}
+                      <a href="{{ url_for('url_view', slug=short, _external=True) }}">
+                        {{ url_for('url_view', slug=short, _external=True) }}
                       </a>
                     </td>
                   </tr>

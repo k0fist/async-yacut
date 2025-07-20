@@ -14,13 +14,10 @@ class Config:
     DISK_TOKEN = os.getenv('DISK_TOKEN')
 
 
-config = Config()
-
-app = Flask(
-    __name__,
-    instance_relative_config=True
-)
-app.config.from_object(config)
+app = Flask(__name__, instance_relative_config=True)
+app.config.from_object(Config)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+
+MAX_LENGTH_CUSTOM_URL = 16

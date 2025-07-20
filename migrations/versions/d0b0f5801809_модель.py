@@ -1,8 +1,8 @@
-"""одна модель
+"""модель
 
-Revision ID: 8ffa6fc1c68f
+Revision ID: d0b0f5801809
 Revises: 
-Create Date: 2025-07-15 22:53:43.937388
+Create Date: 2025-07-17 18:35:03.676270
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8ffa6fc1c68f'
+revision = 'd0b0f5801809'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,8 +21,6 @@ def upgrade():
     op.create_table('link',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('original', sa.Text(), nullable=True),
-    sa.Column('filename', sa.String(length=256), nullable=True),
-    sa.Column('download_url', sa.Text(), nullable=True),
     sa.Column('short', sa.String(length=16), nullable=False),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
