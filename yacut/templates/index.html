@@ -16,23 +16,19 @@
             <form method="POST" novalidate>
                 {{ form.csrf_token }}
                 {{ form.original_link(class="form-control form-control-lg py-3 mb-3", placeholder=form.original_link.label.text) }}
-                {% if form.original_link.errors %}
-                    <p class="text-danger">
-                        <span style="color:red"></span>
-                        {% for error in form.original_link.errors %}
-                        {{ error }}
-                        {% endfor %}
-                    </p>
-                {% endif %}
+                  <p class="text-danger">
+                      <span style="color:red"></span>
+                      {% for error in form.original_link.errors %}
+                      {{ error }}
+                      {% endfor %}
+                  </p>
                 {{ form.custom_id(class="form-control form-control-lg py-3 mb-3", placeholder=form.custom_id.label.text) }}
-                {% if form.custom_id.errors %}
-                    <p class="text-danger">
-                        <span style="color:red"></span>
-                        {% for error in form.custom_id.errors %}
-                        {{ error }}
-                        {% endfor %}
-                    </p>
-                {% endif %}
+                  <p class="text-danger">
+                      <span style="color:red"></span>
+                      {% for error in form.custom_id.errors %}
+                      {{ error }}
+                      {% endfor %}
+                  </p>
                 {{ form.submit(class="btn btn-primary") }}
             </form>
           </div>
@@ -45,12 +41,10 @@
         <div class="row ">
           <div class="col-sm">
           </div>
-          {% if url %}
+          {% if short_url %}
             <div class="col-sm">
               <h5>Ваша ссылка готова:</h5>
-              <a href="{{ url_for('url_view', slug=url.short, _external=True) }}">
-                {{ url_for('url_view', slug=url.short, _external=True) }}
-              </a>
+              <a href="{{ short_url }}">{{ short_url }}</a>
             </div>
           {% endif %}
           <div class="col-sm">

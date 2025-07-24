@@ -14,7 +14,7 @@
           </div>
           <div class="col-sm">
             <form method="POST" 
-                action="{{ url_for('files_view') }}" 
+                action="{{ files_url }}" 
                 enctype="multipart/form-data" 
                 novalidate>
                 {{ form.csrf_token }}
@@ -41,13 +41,11 @@
                 </tr>
               </thead>
               <tbody>
-                {% for filename, short in files %}
+                {% for file in files %}
                   <tr>
-                    <td>{{ filename }}</td>
+                    <td>{{ file.filename }}</td>
                     <td>
-                      <a href="{{ url_for('url_view', slug=short, _external=True) }}">
-                        {{ url_for('url_view', slug=short, _external=True) }}
-                      </a>
+                      <a href="{{ file.public_url }}">{{ file.public_url }}</a>
                     </td>
                   </tr>
                 {% endfor %}

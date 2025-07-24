@@ -2,9 +2,14 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, MultipleFileField
 from wtforms import StringField, SubmitField, URLField
 from wtforms.validators import DataRequired, Length, Optional, Regexp, URL
-from .settings import MAX_LENGTH_CUSTOM_URL
 
-MIN_LENGTH = 1
+from .models import (
+    ALLOWED_SHORT_RE, MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT_URL
+)
+
+
+TEXT_SUBMIT_URL = 'Создать'
+TEXT_SUBMIT_FILES = 'Загрузить'
 
 
 class LinksForm(FlaskForm):
@@ -12,19 +17,20 @@ class LinksForm(FlaskForm):
         'Длинная ссылка',
         validators=[
             DataRequired(message='Обязательное поле'),
-            URL(message='Введите корректный URL')
+            URL(message='Введите корректный URL'),
+            Length(max=MAX_LENGTH_ORIGINAL_URL)
         ]
     )
     custom_id = StringField(
         'Ваш вариант короткой ссылки',
         validators=[
             Optional(),
-            Length(max=MAX_LENGTH_CUSTOM_URL),
-            Regexp(r'^[A-Za-z0-9]+$',
+            Length(max=MAX_LENGTH_SHORT_URL),
+            Regexp(ALLOWED_SHORT_RE,
                    message='Только латинские буквы и цифры')
         ]
     )
-    submit = SubmitField('Создать')
+    submit = SubmitField(TEXT_SUBMIT_URL)
 
 
 class FilesForm(FlaskForm):
@@ -40,4 +46,4 @@ class FilesForm(FlaskForm):
             )
         ]
     )
-    submit = SubmitField('Загрузить')
+    submit = SubmitField(TEXT_SUBMIT_FILES)

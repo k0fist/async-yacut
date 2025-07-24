@@ -9,10 +9,8 @@ DOWNLOAD_ENDPOINT = f'{API_HOST}{API_VERSION}/disk/resources/download'
 
 async def upload_file_to_yadisk(aio_sess, uploaded, token):
     """
-    Загрузка в Яндекс диск.
-
-    Загружает один файл на Яндекс.Диск через aio_sess и
-    возвращает href для скачивания.
+    Загружает один файл на Яндекс.Диск через aio_sess и возвращает
+    прямой href для скачивания.
     """
     filename = uploaded.filename
     headers = {'Authorization': f'OAuth {token}'}
@@ -37,6 +35,4 @@ async def upload_file_to_yadisk(aio_sess, uploaded, token):
         params={'path': disk_path}
     ) as r3:
         r3.raise_for_status()
-        download_href = (await r3.json())['href']
-
-    return download_href
+        return (await r3.json())['href']
