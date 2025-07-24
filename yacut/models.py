@@ -11,6 +11,7 @@ from flask import url_for
 from sqlalchemy.exc import IntegrityError
 
 from .settings import db, SHORT_LINK_ENDPOINT
+from typing import Optional
 from .error_handlers import InvalidAPIUsage
 from .yandex_disk import upload_file_to_yadisk
 
@@ -59,7 +60,7 @@ class URLMap(db.Model):
                 return short
 
     @classmethod
-    def create(cls, original: str, short: str | None = None):
+    def create(cls, original: str, short: Optional[str] = None):
         """
         Валидация и создание новой ссылки.
         Если short задан — проверяем его, иначе генерим свой.
