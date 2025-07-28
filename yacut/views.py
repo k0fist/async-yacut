@@ -1,12 +1,14 @@
+import asyncio
+import aiohttp
 from http import HTTPStatus
 
-from .models import URLMap
+from .models import URLMap, ValidationError
 from .settings import app
 from .forms import LinksForm, FilesForm
 from flask import (
-    render_template, redirect, current_app, session
+    render_template, redirect, current_app, flash
 )
-from .error_handlers import InvalidAPIUsage
+from .yandex_disk import upload_file_to_yadisk
 
 
 API_HOST = 'https://cloud-api.yandex.net/'
@@ -23,19 +25,18 @@ def index_view():
     if not form.validate_on_submit():
         return render_template(
             'index.html',
-            form=form,
-            short_url=short_url
+            form=form
         )
 
     original = form.original_link.data.strip()
-    short = (form.custom_id.data or '').strip()
+    short = (form.custom_id.data)
 
     try:
-        url = URLMap.create(original, short or None)
-    except InvalidAPIUsage as e:
-        form.custom_id.errors.append(e.message)
-    else:
-        short_url = url.public_url
+        link = URLMap.save(original, short)
+    except ValidationError as e:
+        flash(str(e), 'error')
+
+    short_url = link.public_url
 
     return render_template(
         'index.html',
@@ -49,27 +50,41 @@ async def files_view():
     form = FilesForm()
 
     if not form.validate_on_submit():
-        paired = session.pop('uploaded_files', [])
         return render_template(
-            'files.html',
-            form=form,
-            files=paired
+            'files.html', form=form
         ), HTTPStatus.OK
 
-    token = current_app.config['DISK_TOKEN']
-    paired = await URLMap.bulk_create_from_uploads(form.files.data, token)
+    async with aiohttp.ClientSession() as sess:
+        tasks = [
+            upload_file_to_yadisk(
+                sess, uploaded, current_app.config['DISK_TOKEN']
+            )
+            for uploaded in form.files.data
+        ]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # сохраняем для GET в сессии
-    session['uploaded_files'] = paired
+    hrefs = []
+    filenames = []
+    for uploaded, res in zip(form.files.data, results):
+        if isinstance(res, Exception):
+            flash(f'Ошибка загрузки “{uploaded.filename}”: {res}', 'error')
+            continue
+        hrefs.append(res)
+        filenames.append(uploaded.filename)
+
+    urlmaps = URLMap.bulk_create(hrefs)
+
+    paired = [
+        {'filename': fn, 'public_url': um.public_url}
+        for fn, um in zip(filenames, urlmaps)
+    ]
 
     return render_template(
-        'files.html',
-        form=form,
-        files=paired
+        'files.html', form=form, files=paired
     ), HTTPStatus.OK
 
 
 @app.route('/<string:slug>')
 def url_view(slug):
-    link = URLMap.query.filter_by(short=slug).first_or_404()
+    link = URLMap.get_short(slug)
     return redirect(link.original)

@@ -14,22 +14,22 @@
           </div>
           <div class="col-sm">
             <form method="POST" novalidate>
-                {{ form.csrf_token }}
-                {{ form.original_link(class="form-control form-control-lg py-3 mb-3", placeholder=form.original_link.label.text) }}
-                  <p class="text-danger">
-                      <span style="color:red"></span>
-                      {% for error in form.original_link.errors %}
-                      {{ error }}
-                      {% endfor %}
-                  </p>
-                {{ form.custom_id(class="form-control form-control-lg py-3 mb-3", placeholder=form.custom_id.label.text) }}
-                  <p class="text-danger">
-                      <span style="color:red"></span>
-                      {% for error in form.custom_id.errors %}
-                      {{ error }}
-                      {% endfor %}
-                  </p>
-                {{ form.submit(class="btn btn-primary") }}
+              {{ form.csrf_token }}
+              {{ form.original_link(class="form-control form-control-lg py-3 mb-3", placeholder=form.original_link.label.text) }}
+              <p class="text-danger">
+                <span style="color:red"></span>
+                {% for error in form.original_link.errors %}
+                  {{ error }}
+                {% endfor %}
+              </p>
+              {{ form.custom_id(class="form-control form-control-lg py-3 mb-3", placeholder=form.custom_id.label.text) }}
+                <p class="text-danger">
+                  <span style="color:red"></span>
+                  {% for error in form.custom_id.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </p>
+              {{ form.submit(class="btn btn-primary") }}
             </form>
           </div>
           <div class="col-sm">
