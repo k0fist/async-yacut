@@ -1,10 +1,12 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, MultipleFileField
-from wtforms import StringField, SubmitField, URLField, ValidationError
+from wtforms import (
+    StringField, SubmitField, URLField, ValidationError as WTValidationError
+)
 from wtforms.validators import DataRequired, Length, Optional, Regexp, URL
 
 from .models import (
-    ALLOWED_SHORT_RE, MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT_URL, URLMap
+    ALLOWED_SHORT_RE, MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT, URLMap
 )
 
 
@@ -31,7 +33,7 @@ class LinksForm(FlaskForm):
         YOUR_OPTION_SHORT,
         validators=[
             Optional(),
-            Length(max=MAX_LENGTH_SHORT_URL),
+            Length(max=MAX_LENGTH_SHORT),
             Regexp(
                 ALLOWED_SHORT_RE,
                 message=ONLY_LATIN_LETTERS_AND_NUMBERS
@@ -41,14 +43,11 @@ class LinksForm(FlaskForm):
     submit = SubmitField(TEXT_SUBMIT_URL)
 
     def validate_custom_id(self, field):
-        if field.data and field.data.lower() == 'files':
-            raise ValidationError(
-                'Предложенный вариант короткой ссылки уже существует.'
-            )
-        if field.data and URLMap.query.filter_by(short=field.data).first():
-            raise ValidationError(
-                'Предложенный вариант короткой ссылки уже существует.'
-            )
+        if field.data:
+            try:
+                URLMap.validate_short_code(field.data)
+            except Exception as e:
+                raise WTValidationError(str(e))
 
 
 class FilesForm(FlaskForm):

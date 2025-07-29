@@ -1,11 +1,12 @@
 import random
-import re
-import string
 from datetime import datetime
 
-from flask import url_for, abort
-from sqlalchemy.exc import IntegrityError
+from flask import url_for
 
+from .constants import (
+    MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT, SHORT_ID_CHARACTERS,
+    ALLOWED_SHORT_RE, MAX_SHORT_ATTEMPTS, DEFAULT_SHORT_ID_LENGTH
+)
 from .settings import db, SHORT_LINK_ENDPOINT
 from typing import Optional
 
@@ -14,12 +15,8 @@ IMVALID_SHORT_RE = 'Указано недопустимое имя для кор
 INVALID_URL = 'Указан некорректный URL'
 DUPLICATE_SHORT = 'Предложенный вариант короткой ссылки уже существует.'
 NOT_FOUND_SHORT_ID = 'Указанный id не найден'
-MAX_LENGTH_ORIGINAL_URL = 2048
-MAX_LENGTH_SHORT_URL = 16
-SHORT_ID_CHARACTERS = string.ascii_letters + string.digits
-ALLOWED_SHORT_RE = re.compile(rf'^[{re.escape(SHORT_ID_CHARACTERS )}]+$')
-MAX_SHORT_ID_ATTEMPTS = 5
-DEFAULT_SHORT_ID_LENGTH = 6
+ERROR_UNIQUE_SHORT = ('Не удалось сгенерировать уникальный короткий '
+                      'код за {attempts} попыток')
 
 
 class ValidationError(Exception):
@@ -35,7 +32,7 @@ class URLMap(db.Model):
     )
 
     short = db.Column(
-        db.String(MAX_LENGTH_SHORT_URL),
+        db.String(MAX_LENGTH_SHORT),
         nullable=False,
         unique=True,
         default=lambda: URLMap._generate_short_id()
@@ -47,18 +44,17 @@ class URLMap(db.Model):
     def _generate_short_id():
         """
         Генерирует уникальный короткий идентификатор длины SHORT_ID_CHARACTERS
-        с ограничением числа попыток MAX_SHORT_ID_ATTEMPTS.
+        с ограничением числа попыток MAX_SHORT_ATTEMPTS.
         """
-        for _ in range(MAX_SHORT_ID_ATTEMPTS):
+        for _ in range(MAX_SHORT_ATTEMPTS):
             short = ''.join(random.choices(
                 SHORT_ID_CHARACTERS,
                 k=DEFAULT_SHORT_ID_LENGTH
             ))
-            if URLMap.query.filter_by(short=short).first() is None:
+            if URLMap.get_link(short) is None:
                 return short
         raise RuntimeError(
-            f'Не удалось сгенерировать уникальный короткий код за '
-            f'{MAX_SHORT_ID_ATTEMPTS} попыток'
+            ERROR_UNIQUE_SHORT.format(attempts=MAX_SHORT_ATTEMPTS)
         )
 
     @staticmethod
@@ -68,58 +64,36 @@ class URLMap(db.Model):
         — не пустой
         — не зарезервирован ("files")
         — только из SHORT_ID_CHARACTERS
-        — не длиннее MAX_LENGTH_SHORT_URL
+        — не длиннее MAX_LENGTH_SHORT
+        - уникальное название
         Бросает InvalidAPIUsage с кодом 400, если что не так.
         """
-        if not code:
+
+        if len(code) > MAX_LENGTH_SHORT:
             raise ValidationError(IMVALID_SHORT_RE)
 
-        if len(code) > MAX_LENGTH_SHORT_URL:
-            raise ValidationError(IMVALID_SHORT_RE)
-
-        if code == 'files':
+        if code.lower() == 'files':
             raise ValidationError(DUPLICATE_SHORT)
 
         if not ALLOWED_SHORT_RE.fullmatch(code):
             raise ValidationError(IMVALID_SHORT_RE)
 
+        if URLMap.query.filter_by(short=code).first() is not None:
+            raise ValidationError(DUPLICATE_SHORT)
+
     @staticmethod
-    def save(original: str, short: Optional[str] = None):
+    def create(original: str, short: Optional[str] = None) -> 'URLMap':
 
-        obj = URLMap(original=original, short=short)
+        short_code = short or URLMap._generate_short_id()
 
-        db.session.add(obj)
+        link = URLMap(original=original, short=short_code)
+        db.session.add(link)
         db.session.commit()
-        return obj
+        return link
 
     @staticmethod
-    def create_api(original: str, custom: Optional[str] = None) -> 'URLMap':
-        """
-        Для API: выполняет валидацию URL + custom, генерирует short
-        и сохраняет через save.
-        """
-
-        if custom:
-            URLMap.validate_short_code(custom)
-            short_code = custom
-        else:
-            short_code = URLMap._generate_short_id()
-
-        try:
-            return URLMap.save(original, short_code)
-        except IntegrityError:
-            raise ValidationError(
-                DUPLICATE_SHORT
-            )
-
-    @staticmethod
-    def get_short(short_code: str):
-        """
-        Возвращает объект по короткому коду или бросает 404-InvalidAPIUsage.
-        """
-        link = URLMap.query.filter_by(short=short_code).first()
-        if link is None:
-            abort(404)
+    def get_link(short: str):
+        link = URLMap.query.filter_by(short=short).first()
         return link
 
     @property
@@ -131,10 +105,9 @@ class URLMap(db.Model):
         )
 
     @staticmethod
-    def bulk_create(originals):
-
-        created = []
-        for original in originals:
-            link = URLMap.create_api(original, None)
-            created.append(link)
-        return created
+    def bulk_create(urls):
+        """
+        По списку исходных URL генерирует короткие коды
+        и сохраняет их через create, возвращает список объектов URLMap.
+        """
+        return [URLMap.create(url) for url in urls]
