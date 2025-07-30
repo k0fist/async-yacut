@@ -1,11 +1,12 @@
 import random
 from datetime import datetime
+from urllib.parse import urlparse
 
 from flask import url_for
 
 from .constants import (
     MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT, SHORT_CHARACTERS,
-    ALLOWED_SHORT_RE, MAX_SHORT_ATTEMPTS, DEFAULT_SHORT_ID_LENGTH
+    ALLOWED_SHORT_RE, MAX_SHORT_ATTEMPTS, DEFAULT_SHORT_LENGTH
 )
 from .settings import db, SHORT_LINK_ENDPOINT
 from typing import Optional
@@ -50,7 +51,7 @@ class URLMap(db.Model):
         for _ in range(MAX_SHORT_ATTEMPTS):
             short = ''.join(random.choices(
                 SHORT_CHARACTERS,
-                k=DEFAULT_SHORT_ID_LENGTH
+                k=DEFAULT_SHORT_LENGTH
             ))
             if URLMap.get(short) is None:
                 return short
@@ -65,6 +66,13 @@ class URLMap(db.Model):
         validate_short: bool = False
     ) -> 'URLMap':
 
+        if validate_short:
+            if len(original) > MAX_LENGTH_ORIGINAL_URL:
+                raise ValidationError(INVALID_URL)
+            parsed = urlparse(original)
+            if not (parsed.scheme and parsed.netloc):
+                raise ValidationError(INVALID_URL)
+
         if validate_short and short:
             if len(short) > MAX_LENGTH_SHORT:
                 raise ValidationError(IMVALID_SHORT_RE)
@@ -78,9 +86,9 @@ class URLMap(db.Model):
             if URLMap.get(short) is not None:
                 raise ValidationError(DUPLICATE_SHORT)
 
-        short_code = short or URLMap._generate_short_id()
+        short = short or URLMap._generate_short_id()
 
-        mapping = URLMap(original=original, short=short_code)
+        mapping = URLMap(original=original, short=short)
         db.session.add(mapping)
         db.session.commit()
         return mapping

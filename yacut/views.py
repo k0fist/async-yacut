@@ -53,7 +53,6 @@ async def files_view():
         {'filename': f.filename, 'public_url': m.public_url}
         for f, m in zip(form.files.data, mappings)
     ]
-    session['uploaded_files'] = paired
 
     return render_template(
         'files.html', form=form, files=paired

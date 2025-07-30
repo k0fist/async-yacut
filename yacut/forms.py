@@ -52,7 +52,7 @@ class LinksForm(FlaskForm):
         if field.data.lower() == 'files':
             raise WTValidationError(DUPLICATE_SHORT)
 
-        if URLMap.query.filter_by(short=field.data).first():
+        if URLMap.get(field.data):
             raise WTValidationError(DUPLICATE_SHORT)
 
 

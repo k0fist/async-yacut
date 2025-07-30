@@ -29,8 +29,8 @@ def api_create_id():
             short,
             validate_short=True
         )
-    except ValidationError as e:
-        raise InvalidAPIUsage(str(e), HTTPStatus.BAD_REQUEST)
+    except (ValidationError, RuntimeError) as e:
+        raise InvalidAPIUsage(str(e))
 
     return jsonify(
         url=original,
