@@ -1,8 +1,9 @@
-from flask import request, jsonify
 from http import HTTPStatus
 
+from flask import jsonify, request
+
 from .error_handlers import InvalidAPIUsage
-from .models import URLMap, NOT_FOUND_SHORT_ID, ValidationError
+from .models import NOT_FOUND_SHORT_ID, URLMap, ValidationError
 from .settings import app
 
 
@@ -21,24 +22,26 @@ def api_create_id():
 
     original = data['url']
     short = data.get('custom_id')
-    if short:
-        try:
-            URLMap.validate_short_code(short)
-        except ValidationError as e:
-            raise InvalidAPIUsage(str(e), HTTPStatus.BAD_REQUEST)
 
-    link = URLMap.create(original, short)
+    try:
+        mapping = URLMap.create(
+            original,
+            short,
+            validate_short=True
+        )
+    except ValidationError as e:
+        raise InvalidAPIUsage(str(e), HTTPStatus.BAD_REQUEST)
 
     return jsonify(
         url=original,
-        short_link=link.public_url
+        short_link=mapping.public_url
     ), HTTPStatus.CREATED
 
 
 @app.route('/api/id/<string:short>/', methods=['GET'])
 def api_get_url(short):
-    link = URLMap.get_link(short)
-    if link is None:
+    mapping = URLMap.get(short)
+    if mapping is None:
         raise InvalidAPIUsage(NOT_FOUND_SHORT_ID, HTTPStatus.NOT_FOUND)
 
-    return jsonify(url=link.original), HTTPStatus.OK
+    return jsonify(url=mapping.original), HTTPStatus.OK

@@ -6,7 +6,8 @@ from wtforms import (
 from wtforms.validators import DataRequired, Length, Optional, Regexp, URL
 
 from .models import (
-    ALLOWED_SHORT_RE, MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT, URLMap
+    ALLOWED_SHORT_RE, MAX_LENGTH_ORIGINAL_URL, MAX_LENGTH_SHORT,
+    URLMap, DUPLICATE_SHORT
 )
 
 
@@ -18,6 +19,8 @@ ENTER_CORRECT_URL = 'Введите корректный URL'
 YOUR_OPTION_SHORT = 'Ваш вариант короткой ссылки'
 ONLY_LATIN_LETTERS_AND_NUMBERS = 'Только латинские буквы и цифры'
 ACCEPTABLE_EXTENSIONS = 'jpg', 'jpeg', 'png', 'gif', 'bmp'
+CHOOSING_EXTENSIONS = ('Выберите файлы с расширением '
+                       f'{ACCEPTABLE_EXTENSIONS}')
 
 
 class LinksForm(FlaskForm):
@@ -43,11 +46,14 @@ class LinksForm(FlaskForm):
     submit = SubmitField(TEXT_SUBMIT_URL)
 
     def validate_custom_id(self, field):
-        if field.data:
-            try:
-                URLMap.validate_short_code(field.data)
-            except Exception as e:
-                raise WTValidationError(str(e))
+        if not field.data:
+            return
+
+        if field.data.lower() == 'files':
+            raise WTValidationError(DUPLICATE_SHORT)
+
+        if URLMap.query.filter_by(short=field.data).first():
+            raise WTValidationError(DUPLICATE_SHORT)
 
 
 class FilesForm(FlaskForm):
@@ -55,10 +61,9 @@ class FilesForm(FlaskForm):
         validators=[
             DataRequired(message=REQUIRED_FIELD),
             FileAllowed(
-                (ACCEPTABLE_EXTENSIONS),
+                ACCEPTABLE_EXTENSIONS,
                 message=(
-                    'Выберите файлы с расширением '
-                    f'{ACCEPTABLE_EXTENSIONS}'
+                    CHOOSING_EXTENSIONS
                 )
             )
         ]

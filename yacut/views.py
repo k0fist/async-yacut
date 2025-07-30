@@ -1,12 +1,11 @@
 from http import HTTPStatus
-from flask import (
-    render_template, redirect, current_app, flash, abort, session
-)
 
+from flask import abort, flash, redirect, render_template, session
+
+from .forms import FilesForm, LinksForm
 from .models import URLMap, ValidationError
-from .forms import LinksForm, FilesForm
-from .settings import db, app
-from .yandex_disk import upload_and_shorten
+from .settings import app
+from .yandex_disk import bulk_upload
 
 
 @app.route('/', methods=('GET', 'POST'))
@@ -23,11 +22,10 @@ def index_view():
     short = form.custom_id.data
 
     try:
-        mapping = URLMap(original=original, short=short)
-        db.session.add(mapping)
-        db.session.commit()
-    except ValidationError as e:
+        mapping = URLMap.create(original=original, short=short)
+    except (ValidationError, RuntimeError) as e:
         flash(str(e))
+        return render_template('index.html', form=form)
 
     short_url = mapping.public_url
 
@@ -41,17 +39,22 @@ def index_view():
 @app.route('/files', methods=['GET', 'POST'])
 async def files_view():
     form = FilesForm()
+
     if not form.validate_on_submit():
         paired = session.pop('uploaded_files', [])
         return render_template(
             'files.html', form=form, files=paired
         ), HTTPStatus.OK
 
-    paired = await upload_and_shorten(
-        form.files.data,
-        current_app.config['DISK_TOKEN']
-    )
+    hrefs = await bulk_upload(form.files.data)
+    mappings = URLMap.bulk_create(hrefs)
+
+    paired = [
+        {'filename': f.filename, 'public_url': m.public_url}
+        for f, m in zip(form.files.data, mappings)
+    ]
     session['uploaded_files'] = paired
+
     return render_template(
         'files.html', form=form, files=paired
     ), HTTPStatus.OK
@@ -59,7 +62,7 @@ async def files_view():
 
 @app.route('/<string:slug>')
 def url_view(slug):
-    mapping = URLMap.get_link(slug)
+    mapping = URLMap.get(slug)
     if mapping is None:
-        abort(404)
+        abort(HTTPStatus.NOT_FOUND)
     return redirect(mapping.original)

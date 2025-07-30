@@ -1,19 +1,17 @@
 import urllib.parse
 import asyncio
 import aiohttp
-from flask import flash
-from typing import List, Dict
-
-from .models import URLMap
+from flask import flash, current_app
 
 API_HOST = 'https://cloud-api.yandex.net/'
 API_VERSION = 'v1'
 UPLOAD_ENDPOINT = f'{API_HOST}{API_VERSION}/disk/resources/upload'
 DOWNLOAD_ENDPOINT = f'{API_HOST}{API_VERSION}/disk/resources/download'
+ERROR_DOWNLOAD = 'Ошибка загрузки “{filename}”: {href}'
 
 
-async def _upload_one(sess: aiohttp.ClientSession, file, token: str) -> str:
-
+async def _upload_one(sess: aiohttp.ClientSession, file) -> str:
+    token = current_app.config['DISK_TOKEN']
     headers = {'Authorization': f'OAuth {token}'}
 
     async with sess.get(
@@ -40,25 +38,18 @@ async def _upload_one(sess: aiohttp.ClientSession, file, token: str) -> str:
         return (await r3.json())['href']
 
 
-async def upload_and_shorten(
-    files: List,
-    token: str
-) -> List[Dict[str, str]]:
-
-    results = []
+async def bulk_upload(files):
     async with aiohttp.ClientSession() as sess:
-        tasks = [_upload_one(sess, f, token) for f in files]
-        hrefs = await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = [_upload_one(sess, f) for f in files]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    for f, href in zip(files, hrefs):
-        if isinstance(href, Exception):
-            flash(f'Ошибка загрузки “{f.filename}”: {href}', 'error')
-            continue
+    urls = []
+    for f, res in zip(files, results):
+        if isinstance(res, Exception):
+            flash(ERROR_DOWNLOAD.format(
+                filename=f.filename, error=res
+            ), 'error')
+        else:
+            urls.append(res)
 
-        obj = URLMap.create(href, None)
-        results.append({
-            'filename': f.filename,
-            'public_url': obj.public_url
-        })
-
-    return results
+    return urls
